@@ -48,6 +48,7 @@ public class AuthController {
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setFullName(req.getFullName());
         user.setProvider(AuthProvider.LOCAL);
+
         Role userRole = roleRepo.findByName("ROLE_USER").orElseThrow();
         user.getRoles().add(userRole);
         userRepo.save(user);
@@ -60,13 +61,33 @@ public class AuthController {
                 new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword())
         );
         String token = tokenProvider.generateToken(authentication);
-        return ResponseEntity.ok(new JwtAuthenticationResponse(token));
+        User user = userRepo.findByEmail(req.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return ResponseEntity.ok(Map.of(
+                "token", token,
+                "roles", user.getRoles().stream().map(Role::getName).toList(),
+                "email", user.getEmail(),
+                "fullName", user.getFullName()
+        ));
     }
 
     @GetMapping("/me")
     public ResponseEntity<?> me(Authentication authentication) {
         if (authentication == null) return ResponseEntity.status(401).build();
         String email = authentication.getName();
-        return ResponseEntity.ok(userRepo.findByEmail(email).orElse(null));
+        User user = userRepo.findByEmail(email).orElseThrow();
+
+        return ResponseEntity.ok(Map.of(
+                "email", user.getEmail(),
+                "fullName", user.getFullName(),
+                "roles", user.getRoles().stream().map(Role::getName).toList()
+        ));
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout() {
+        return ResponseEntity.ok(Map.of("message", "Logout successful"));
+    }
+
 }

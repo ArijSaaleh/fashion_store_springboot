@@ -22,7 +22,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
     private final UserService userService;
     private final JwtTokenProvider tokenProvider;
 
-    @Value("${app.oauth2.redirectUri}")
+    @Value("${spring.security.oauth2.redirectUri}")
     private String redirectUri;
 
     public OAuth2AuthenticationSuccessHandler(UserService us, JwtTokenProvider tp) {

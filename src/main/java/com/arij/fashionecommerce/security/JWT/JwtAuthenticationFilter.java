@@ -1,15 +1,18 @@
 package com.arij.fashionecommerce.security.JWT;
 
 import com.arij.fashionecommerce.security.CustomUserDetailsService;
-import com.arij.fashionecommerce.security.UserPrincipal;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.web.filter.OncePerRequestFilter;
-import java.io.IOException;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
@@ -25,17 +28,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
 
-        String header = request.getHeader("Authorization");
-        if (header != null && header.startsWith("Bearer ")) {
-            String token = header.substring(7);
-            if (tokenProvider.validateToken(token)) {
-                String email = tokenProvider.getEmailFromToken(token);
-                UserPrincipal userDetails = userDetailsService.loadUserByUsername(email);
-                UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
+        try {
+            String token = getJwtFromRequest(request);
+
+            if (token != null && tokenProvider.validateToken(token)) {
+                Authentication auth = tokenProvider.getAuthentication(token, userDetailsService);
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }
+
+        } catch (ExpiredJwtException ex) {
+            request.setAttribute("jwt_error", "Token expired");
+        } catch (MalformedJwtException ex) {
+            request.setAttribute("jwt_error", "Malformed token");
+        } catch (SignatureException ex) {
+            request.setAttribute("jwt_error", "Invalid token signature");
+        } catch (Exception ex) {
+            request.setAttribute("jwt_error", "Invalid token");
         }
+
         chain.doFilter(request, response);
+    }
+
+    private String getJwtFromRequest(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
     }
 }

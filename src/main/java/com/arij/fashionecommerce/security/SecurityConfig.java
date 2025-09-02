@@ -4,8 +4,11 @@ package com.arij.fashionecommerce.security;
 import com.arij.fashionecommerce.security.JWT.JwtAuthenticationFilter;
 import com.arij.fashionecommerce.security.JWT.JwtTokenProvider;
 import com.arij.fashionecommerce.security.OAthu2.OAuth2AuthenticationSuccessHandler;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -23,6 +26,8 @@ import java.util.Arrays;
 
 
 @Configuration
+@EnableMethodSecurity
+
 public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
@@ -56,9 +61,23 @@ public class SecurityConfig {
                         .authorizationEndpoint(a -> a.baseUri("/oauth2/authorize"))
                         .redirectionEndpoint(r -> r.baseUri("/oauth2/callback/*"))
                         .successHandler(oauth2SuccessHandler)
+                ).exceptionHandling( ex -> ex.authenticationEntryPoint(((request, response, authException) -> {
+                    response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                    response.setContentType("application/json");
+                    response.getWriter().write("Unauthorized");
+                })).accessDeniedHandler((request, response, accessDeniedException) -> {
+                    response.setStatus(HttpStatus.FORBIDDEN.value());
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\": \"Forbidden\"}");
+                }))
+                .oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(a -> a.baseUri("/oauth2/authorize"))
+                        .redirectionEndpoint(r -> r.baseUri("/oauth2/callback/*"))
+                        .successHandler(oauth2SuccessHandler)
                 );
 
         http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 
