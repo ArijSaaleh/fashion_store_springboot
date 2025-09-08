@@ -5,6 +5,7 @@ import com.arij.fashionecommerce.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,16 +22,16 @@ public class ProductController {
 
     // Public list + search
     @GetMapping
-    public Page<ProductResponse> search(
+    public PageResponse<ProductResponse> search(
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String q,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
-            @PageableDefault(size = 12, sort = "createdAt,desc") Pageable pageable
+            @PageableDefault(size = 12, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return service.search(categoryId, q, minPrice, maxPrice, pageable);
+        Page<ProductResponse> page = service.search(categoryId, q, minPrice, maxPrice, pageable);
+        return new PageResponse<>(page);
     }
-
     // Public single
     @GetMapping("/{id}")
     public ProductResponse get(@PathVariable Long id) {
